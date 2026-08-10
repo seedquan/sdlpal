@@ -593,35 +593,45 @@ VIDEO_HD_Present(
       }
 
       if (SDL_MUSTLOCK(gpScreenReal)) SDL_LockSurface(gpScreenReal);
-      if (useHdBg && SDL_MUSTLOCK(gpScreen)) SDL_LockSurface(gpScreen);
       {
-         const uint8_t *liveIdxRow = (const uint8_t *)gpScreen->pixels;
-         INT liveStride = gpScreen->pitch;
          INT rowStride = gpScreenReal->pitch / (INT)sizeof(uint32_t);
          src = (uint32_t *)gpScreenReal->pixels;
-         for (syi = 0; syi < HD_H; syi++)
+         if (useHdBg)
          {
-            INT sy = syi / HD_SCALE;
-            for (sxi = 0; sxi < HD_W; sxi++)
+            if (SDL_MUSTLOCK(gpScreen)) SDL_LockSurface(gpScreen);
             {
-               INT sx = sxi / HD_SCALE;
-               uint32_t up = src[sy * rowStride + sx] | 0xFF000000u;
-               if (useHdBg)
+               const uint8_t *liveIdxRow = (const uint8_t *)gpScreen->pixels;
+               INT liveStride = gpScreen->pitch;
+               for (syi = 0; syi < HD_H; syi++)
                {
-                  BYTE liveIdx = liveIdxRow[sy * liveStride + sx];
-                  BYTE bgIdx   = g_hdBattleBg[sy * 320 + sx];
-                  const uint8_t *pp = hdbg + (syi * HD_W + sxi) * 4;
-                  uint32_t hdpx = ((uint32_t)pp[3] << 24) | ((uint32_t)pp[0] << 16) | ((uint32_t)pp[1] << 8) | (uint32_t)pp[2];
-                  gpHDPixels[syi * HD_W + sxi] = HD_PickBgPixel(liveIdx, bgIdx, hdpx, up);
+                  INT sy = syi / HD_SCALE;
+                  for (sxi = 0; sxi < HD_W; sxi++)
+                  {
+                     INT sx = sxi / HD_SCALE;
+                     uint32_t up = src[sy * rowStride + sx] | 0xFF000000u;
+                     BYTE liveIdx = liveIdxRow[sy * liveStride + sx];
+                     BYTE bgIdx   = g_hdBattleBg[sy * 320 + sx];
+                     const uint8_t *pp = hdbg + (syi * HD_W + sxi) * 4;
+                     uint32_t hdpx = ((uint32_t)pp[3] << 24) | ((uint32_t)pp[0] << 16) | ((uint32_t)pp[1] << 8) | (uint32_t)pp[2];
+                     gpHDPixels[syi * HD_W + sxi] = HD_PickBgPixel(liveIdx, bgIdx, hdpx, up);
+                  }
                }
-               else
+            }
+            if (SDL_MUSTLOCK(gpScreen)) SDL_UnlockSurface(gpScreen);
+         }
+         else
+         {
+            for (syi = 0; syi < HD_H; syi++)
+            {
+               INT sy = syi / HD_SCALE;
+               for (sxi = 0; sxi < HD_W; sxi++)
                {
-                  gpHDPixels[syi * HD_W + sxi] = up;
+                  INT sx = sxi / HD_SCALE;
+                  gpHDPixels[syi * HD_W + sxi] = src[sy * rowStride + sx] | 0xFF000000u;
                }
             }
          }
       }
-      if (useHdBg && SDL_MUSTLOCK(gpScreen)) SDL_UnlockSurface(gpScreen);
       if (SDL_MUSTLOCK(gpScreenReal)) SDL_UnlockSurface(gpScreenReal);
    }
    else
