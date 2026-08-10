@@ -563,16 +563,21 @@ VIDEO_HD_Present(
    //
    // Base layer: nearest-upscale gpScreenReal (already palette-colorized/faded).
    //
-   src = (uint32_t *)gpScreenReal->pixels;
-   for (syi = 0; syi < HD_H; syi++)
+   if (SDL_MUSTLOCK(gpScreenReal)) SDL_LockSurface(gpScreenReal);
    {
-      INT sy = syi / HD_SCALE;
-      for (sxi = 0; sxi < HD_W; sxi++)
+      INT rowStride = gpScreenReal->pitch / (INT)sizeof(uint32_t);
+      src = (uint32_t *)gpScreenReal->pixels;
+      for (syi = 0; syi < HD_H; syi++)
       {
-         INT sx = sxi / HD_SCALE;
-         gpHDPixels[syi * HD_W + sxi] = src[sy * gpScreenReal->w + sx] | 0xFF000000u;
+         INT sy = syi / HD_SCALE;
+         for (sxi = 0; sxi < HD_W; sxi++)
+         {
+            INT sx = sxi / HD_SCALE;
+            gpHDPixels[syi * HD_W + sxi] = src[sy * rowStride + sx] | 0xFF000000u;
+         }
       }
    }
+   if (SDL_MUSTLOCK(gpScreenReal)) SDL_UnlockSurface(gpScreenReal);
 
    //
    // Overlays: plain sprites this frame, colorized with the live palette.
@@ -585,6 +590,7 @@ VIDEO_HD_Present(
       if (!cmds[c].plain || cmds[c].sprite == NULL) continue;
       if (PAL_HDRenderSprite(cmds[c].sprite, gpPalette->colors, HD_SCALE, spr, &ow, &oh) != 0)
          continue;
+      if (ow > HD_W || oh > HD_H) continue;
       for (oy = 0; oy < oh; oy++)
       {
          INT dyv = cmds[c].y * HD_SCALE + oy;
@@ -732,7 +738,7 @@ VIDEO_UpdateScreen(
       {
          SDL_UnlockSurface(gpScreenReal);
       }
-      VIDEO_HD_Present();
+      VIDEO_HD_Present();   /* VIDEO_HD_Present manages its own lock/unlock internally */
       return;
    }
    gRenderBackend.RenderCopy();
