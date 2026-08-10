@@ -22,6 +22,7 @@
 #ifndef _PALUTILS_H
 #define _PALUTILS_H
 
+#include <stdint.h>
 #include "common.h"
 
 typedef LPBYTE      LPSPRITE, LPBITMAPRLE;

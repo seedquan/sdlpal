@@ -813,6 +813,11 @@ PAL_RLESpriteBytes(
    lpBitmapRLE += 4;
    uiBytes = 4;
 
+   if (uiTotal == 0)
+   {
+      return uiPrefix + 4;   /* header only, no pixel data */
+   }
+
    while (uiProduced < uiTotal)
    {
       T = *lpBitmapRLE++;
@@ -870,9 +875,10 @@ PAL_HashSprite(
       uiPrefix = 4;
    }
 
-   uiBytes = PAL_RLESpriteBytes(lpBitmapRLE);
-   p = lpBitmapRLE + uiPrefix;            /* hash prefix-stripped content */
-   for (i = 0; i < uiBytes - uiPrefix; i++)
+   uiBytes = PAL_RLESpriteBytes(lpBitmapRLE);   /* >= uiPrefix + 4 (lpBitmapRLE is non-NULL here) */
+   p = lpBitmapRLE + uiPrefix;
+   uiBytes -= uiPrefix;                         /* content length, prefix stripped */
+   for (i = 0; i < uiBytes; i++)
    {
       hash ^= (uint64_t)p[i];
       hash *= FNV_PRIME;
