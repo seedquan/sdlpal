@@ -1249,3 +1249,31 @@ TEST(sdlpal, PAL_HDRenderSprite) {
 
     EXPECT_EQ(-1, PAL_HDRenderSprite(NULL, pal, 2, out, &ow, &oh));
 }
+
+extern "C" {
+    #include "hd_extract_core.h"
+}
+
+TEST(sdlpal, HDX_HashMatchesRuntime) {
+    SDL_Color pal[256];
+    for (int i = 0; i < 256; i++) { pal[i].r = i; pal[i].g = i; pal[i].b = i; pal[i].a = 255; }
+    static uint8_t rgba[320 * 200 * 4];
+    uint64_t hash = 0; int w = 0, h = 0;
+    ASSERT_EQ(0, HDX_RenderSprite(bitmap, pal, &hash, rgba, &w, &h));
+    // Extractor hash MUST equal the runtime hash for the same bytes.
+    EXPECT_EQ(PAL_HashSprite(bitmap), hash);
+    EXPECT_EQ((int)(bitmap[0] | (bitmap[1] << 8)), w);
+    EXPECT_EQ((int)(bitmap[2] | (bitmap[3] << 8)), h);
+    EXPECT_EQ(-1, HDX_RenderSprite(NULL, pal, &hash, rgba, &w, &h));
+}
+
+TEST(sdlpal, HDX_ParsePaletteScales) {
+    uint8_t buf[768];
+    for (int i = 0; i < 768; i++) buf[i] = (uint8_t)(i & 0x3F);
+    SDL_Color out[256];
+    HDX_ParsePalette(buf, 768, out);
+    EXPECT_EQ((uint8_t)(buf[0] << 2), out[0].r);
+    EXPECT_EQ((uint8_t)(buf[3 * 5 + 1] << 2), out[5].g);
+    EXPECT_EQ((uint8_t)(buf[3 * 7 + 2] << 2), out[7].b);
+    EXPECT_EQ(255, out[10].a);
+}
