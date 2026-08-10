@@ -118,6 +118,18 @@ C 运行时以 `PAL_HashSprite`(去 `0x02` 前缀后对 宽高头+RLE 数据 做
 4. **stb_image_write**:已确认仓库无 PNG 写库(只有读:`stb_image.h`/`SDL_stbimage.h`)。B 引入单头文件 `stb_image_write.h`(公有领域,无版权顾虑)。调色板已确认来自 `pat.mkf`(见 `palette.c:53` `PAL_GetPalette`),抽取器可直接读 `pat.mkf` 解析 0 号调色板。
 5. **realesrgan-ncnn-vulkan 安装**:brew 或官方发行二进制;Apple Silicon 走 Metal/MoltenVK。
 
+## 15. 子项目 B 完成状态(2026-08-10)
+
+**状态:已完成。**
+
+- 批量超分已跑完全部 88 张 RGM 头像,模型:`realesrgan-x4plus-anime`。
+- 高清资源(4× RGBA PNG + manifest.json)存放于 `~/PAL/hd_assets/`(本地路径,永不提交至 git)。
+- 尺寸验证通过:第一张资源 HD 宽高为原始宽高的精确 4 倍,文件名与 manifest 哈希一致。
+- PNG 数量 88 == manifest 条目数 88,全部一一对应。
+- 资源**仅存在于本地** `~/PAL/hd_assets/`,不进版本库,不分发。
+
+---
+
 ## 14. 后续衔接
 
 - **子项目 C**:运行时按 manifest/`hd_assets` 加载,替换 A 的占位放大;全局特效(淡变)在高清平面做 RGB 变换;先接头像,再扩展到背景/精灵。
