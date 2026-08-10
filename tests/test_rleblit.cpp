@@ -1245,6 +1245,7 @@ TEST(sdlpal, PAL_HDRenderSprite) {
     EXPECT_EQ(c5, out[1]);            // (1,0)
     EXPECT_EQ(c6, out[2]);            // (2,0)
     EXPECT_EQ(c6, out[4 + 2]);        // (2,1) — row 1, col 2: source pixel (1,0) = idx 6
+    EXPECT_EQ(c5, out[4 + 0]);        // (0,1) -> source (0,0)
 
     EXPECT_EQ(-1, PAL_HDRenderSprite(NULL, pal, 2, out, &ow, &oh));
 }

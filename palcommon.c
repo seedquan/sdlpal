@@ -1336,7 +1336,7 @@ PAL_HDRenderSprite(
    static BYTE  cov[320 * 200];      /* coverage: 1 = opaque */
    UINT   pos = 0;
 
-   if (lpBitmapRLE == NULL || out == NULL || scale <= 0)
+   if (lpBitmapRLE == NULL || out == NULL || palette == NULL || outW == NULL || outH == NULL || scale <= 0)
    {
       return -1;
    }
