@@ -583,8 +583,20 @@ VIDEO_HD_Present(
    //
    if (!g_hdOverlayOnly)
    {
-      if (SDL_MUSTLOCK(gpScreenReal)) SDL_LockSurface(gpScreenReal);
+      const uint8_t *hdbg = NULL; INT hbw = 0, hbh = 0;
+      BOOL useHdBg = FALSE;
+      if (g_hdBattleBgActive &&
+          HDAssets_Get(g_hdBattleBgHash, &hdbg, &hbw, &hbh) == 0 &&
+          hbw == HD_W && hbh == HD_H)
       {
+         useHdBg = TRUE;
+      }
+
+      if (SDL_MUSTLOCK(gpScreenReal)) SDL_LockSurface(gpScreenReal);
+      if (useHdBg && SDL_MUSTLOCK(gpScreen)) SDL_LockSurface(gpScreen);
+      {
+         const uint8_t *liveIdxRow = (const uint8_t *)gpScreen->pixels;
+         INT liveStride = gpScreen->pitch;
          INT rowStride = gpScreenReal->pitch / (INT)sizeof(uint32_t);
          src = (uint32_t *)gpScreenReal->pixels;
          for (syi = 0; syi < HD_H; syi++)
@@ -593,10 +605,23 @@ VIDEO_HD_Present(
             for (sxi = 0; sxi < HD_W; sxi++)
             {
                INT sx = sxi / HD_SCALE;
-               gpHDPixels[syi * HD_W + sxi] = src[sy * rowStride + sx] | 0xFF000000u;
+               uint32_t up = src[sy * rowStride + sx] | 0xFF000000u;
+               if (useHdBg)
+               {
+                  BYTE liveIdx = liveIdxRow[sy * liveStride + sx];
+                  BYTE bgIdx   = g_hdBattleBg[sy * 320 + sx];
+                  const uint8_t *pp = hdbg + (syi * HD_W + sxi) * 4;
+                  uint32_t hdpx = ((uint32_t)pp[3] << 24) | ((uint32_t)pp[0] << 16) | ((uint32_t)pp[1] << 8) | (uint32_t)pp[2];
+                  gpHDPixels[syi * HD_W + sxi] = HD_PickBgPixel(liveIdx, bgIdx, hdpx, up);
+               }
+               else
+               {
+                  gpHDPixels[syi * HD_W + sxi] = up;
+               }
             }
          }
       }
+      if (useHdBg && SDL_MUSTLOCK(gpScreen)) SDL_UnlockSurface(gpScreen);
       if (SDL_MUSTLOCK(gpScreenReal)) SDL_UnlockSurface(gpScreenReal);
    }
    else

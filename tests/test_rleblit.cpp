@@ -1375,3 +1375,9 @@ TEST(sdlpal, HDX_RenderBitmap) {
     EXPECT_EQ(5,   out[0]);  EXPECT_EQ(6,   out[1]);  EXPECT_EQ(7,   out[2]);  EXPECT_EQ(255, out[3]);
     EXPECT_EQ(200, out[4]);  EXPECT_EQ(201, out[5]);  EXPECT_EQ(202, out[6]);  EXPECT_EQ(255, out[7]);
 }
+
+TEST(sdlpal, HD_PickBgPixel) {
+    uint32_t hd = 0xFFAABBCC, up = 0xFF112233;
+    EXPECT_EQ(hd, HD_PickBgPixel(7, 7, hd, up));   // unchanged -> HD background
+    EXPECT_EQ(up, HD_PickBgPixel(7, 9, hd, up));   // changed  -> upscaled placeholder
+}

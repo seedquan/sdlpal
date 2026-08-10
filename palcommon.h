@@ -322,6 +322,14 @@ YJ2_Decompress(
    INT          DestSize
 );
 
+uint32_t
+HD_PickBgPixel(
+   BYTE      liveIdx,
+   BYTE      bgIdx,
+   uint32_t  hdBgPx,
+   uint32_t  upscaledPx
+);
+
 PAL_C_LINKAGE_END
 
 #define PAL_DelayUntil(t) \

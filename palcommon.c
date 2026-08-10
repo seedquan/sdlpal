@@ -1459,3 +1459,14 @@ PAL_HDRenderSprite(
    }
    return 0;
 }
+
+uint32_t
+HD_PickBgPixel(
+   BYTE      liveIdx,
+   BYTE      bgIdx,
+   uint32_t  hdBgPx,
+   uint32_t  upscaledPx
+)
+{
+   return (liveIdx == bgIdx) ? hdBgPx : upscaledPx;
+}
