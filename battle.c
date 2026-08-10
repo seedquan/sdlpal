@@ -971,6 +971,7 @@ PAL_LoadBattleBackground(
 --*/
 {
    PAL_LARGE BYTE           buf[320 * 200];
+   int                      fbpLen;
 
    //
    // Create the surface
@@ -985,20 +986,28 @@ PAL_LoadBattleBackground(
    //
    // Load the picture
    //
-   PAL_MKFDecompressChunk(buf, 320 * 200, gpGlobals->wNumBattleField, gpGlobals->f.fpFBP);
-
-   //
-   // HD: remember the decompressed battle background + its hash so VIDEO_HD_Present
-   // can swap in an HD version. Cleared when the battle ends (PAL_StartBattle).
-   //
-   memcpy(g_hdBattleBg, buf, 320 * 200);
-   g_hdBattleBgHash = PAL_HashBytes(buf, 320 * 200);
-   g_hdBattleBgActive = TRUE;
+   fbpLen = PAL_MKFDecompressChunk(buf, 320 * 200, gpGlobals->wNumBattleField, gpGlobals->f.fpFBP);
 
    //
    // Draw the picture to the surface.
    //
    PAL_FBPBlitToSurface(buf, g_Battle.lpBackground);
+
+   //
+   // HD: remember the decompressed battle background + its hash so VIDEO_HD_Present
+   // can swap in an HD version. Only store when we got a full 320x200 buffer.
+   // Cleared when the battle ends (PAL_StartBattle).
+   //
+   if (fbpLen == 320 * 200)
+   {
+      memcpy(g_hdBattleBg, buf, 320 * 200);
+      g_hdBattleBgHash = PAL_HashBytes(buf, 320 * 200);
+      g_hdBattleBgActive = TRUE;
+   }
+   else
+   {
+      g_hdBattleBgActive = FALSE;
+   }
 }
 
 static VOID

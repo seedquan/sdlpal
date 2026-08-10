@@ -591,6 +591,7 @@ VIDEO_HD_Present(
       {
          useHdBg = TRUE;
       }
+      if (g_wShakeTime != 0) useHdBg = FALSE;
 
       if (SDL_MUSTLOCK(gpScreenReal)) SDL_LockSurface(gpScreenReal);
       {
@@ -612,7 +613,7 @@ VIDEO_HD_Present(
                      BYTE liveIdx = liveIdxRow[sy * liveStride + sx];
                      BYTE bgIdx   = g_hdBattleBg[sy * 320 + sx];
                      const uint8_t *pp = hdbg + (syi * HD_W + sxi) * 4;
-                     uint32_t hdpx = ((uint32_t)pp[3] << 24) | ((uint32_t)pp[0] << 16) | ((uint32_t)pp[1] << 8) | (uint32_t)pp[2];
+                     uint32_t hdpx = 0xFF000000u | ((uint32_t)pp[0] << 16) | ((uint32_t)pp[1] << 8) | (uint32_t)pp[2];
                      gpHDPixels[syi * HD_W + sxi] = HD_PickBgPixel(liveIdx, bgIdx, hdpx, up);
                   }
                }
