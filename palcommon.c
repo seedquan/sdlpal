@@ -91,6 +91,14 @@ PAL_RLEBlitToSurfaceWithShadow(
    }
 
    //
+   // HD remaster: record a draw command for the plain, non-shadow path.
+   //
+   if (gConfig.fHDRemaster && !bShadow)
+   {
+      PAL_HDRecordBlit(PAL_HashSprite(lpBitmapRLE), dx, dy, TRUE);
+   }
+
+   //
    // Skip the 0x00000002 in the file header.
    //
    if (lpBitmapRLE[0] == 0x02 && lpBitmapRLE[1] == 0x00 &&
