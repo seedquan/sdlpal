@@ -187,9 +187,12 @@ PAL_InitGlobals(
    if (!PAL_IsWINVersion(&gConfig.fIsWIN95)) return -1;
 
    //
-   // Enable AVI playing only when the resource is WIN95
+   // Enable AVI playing whenever the config requests it. The AVI trigger
+   // points (trademark/splash/new-game/endings) are hard-coded in the engine,
+   // so DOS resources can also play WIN95 movie files when present; PAL_PlayAVI
+   // falls back gracefully when a given .avi file is missing.
    //
-   gConfig.fEnableAviPlay = gConfig.fEnableAviPlay && gConfig.fIsWIN95;
+   gConfig.fEnableAviPlay = gConfig.fEnableAviPlay;
 
    //
    // Detect game language only when no message file specified
