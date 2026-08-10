@@ -223,6 +223,17 @@ PAL_HashSprite(
    LPCBITMAPRLE      lpBitmapRLE
 );
 
+typedef struct tagHDDRAWCMD {
+   uint64_t   hash;       /* PAL_HashSprite of the sprite */
+   INT        x, y;       /* destination top-left in 320x200 space */
+   BOOL       plain;      /* TRUE only for the plain blit path (no colorshift/mono/shadow) */
+} HDDRAWCMD;
+
+void        PAL_HDResetFrameOnNextRecord(void);   /* mark: next record starts a new frame */
+void        PAL_HDRecordBlit(uint64_t hash, INT x, INT y, BOOL plain);
+UINT        PAL_HDGetFrameCommands(const HDDRAWCMD **ppCmds);  /* returns count, sets *ppCmds */
+UINT        PAL_HDGetUniqueHashCount(void);        /* distinct hashes in current frame */
+
 WORD
 PAL_SpriteGetNumFrames(
    LPCSPRITE       lpSprite

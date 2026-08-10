@@ -1195,3 +1195,32 @@ TEST(sdlpal, PAL_HashSprite) {
     mutated[n - 1] ^= 0xFF;
     EXPECT_NE(a, PAL_HashSprite(mutated.data()));
 }
+
+TEST(sdlpal, PAL_HDDrawCommandBuffer) {
+    const HDDRAWCMD *cmds = NULL;
+
+    // Fresh frame: reset-then-record clears and appends.
+    PAL_HDResetFrameOnNextRecord();
+    PAL_HDRecordBlit(0x1111, 10, 20, TRUE);
+    PAL_HDRecordBlit(0x2222, 30, 40, TRUE);
+    EXPECT_EQ(2u, PAL_HDGetFrameCommands(&cmds));
+    EXPECT_EQ(0x1111ull, cmds[0].hash);
+    EXPECT_EQ(30, cmds[1].x);
+
+    // Same frame (no reset): appends.
+    PAL_HDRecordBlit(0x3333, 0, 0, FALSE);
+    EXPECT_EQ(3u, PAL_HDGetFrameCommands(&cmds));
+
+    // Unique hash count ignores duplicates.
+    PAL_HDResetFrameOnNextRecord();
+    PAL_HDRecordBlit(0xAAAA, 0, 0, TRUE);
+    PAL_HDRecordBlit(0xAAAA, 1, 1, TRUE);
+    PAL_HDRecordBlit(0xBBBB, 2, 2, TRUE);
+    EXPECT_EQ(2u, PAL_HDGetUniqueHashCount());
+
+    // A reset followed by a record starts a brand new frame (old cmds gone).
+    PAL_HDResetFrameOnNextRecord();
+    PAL_HDRecordBlit(0xCCCC, 5, 5, TRUE);
+    EXPECT_EQ(1u, PAL_HDGetFrameCommands(&cmds));
+    EXPECT_EQ(0xCCCCull, cmds[0].hash);
+}

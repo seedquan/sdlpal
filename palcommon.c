@@ -1249,3 +1249,72 @@ PAL_MKFDecompressChunk(
 
    return len;
 }
+
+/* ---------------------------------------------------------------------------
+ * HD render: per-frame draw-command buffer
+ * ---------------------------------------------------------------------------
+ */
+
+#define HD_MAX_CMDS   4096
+static HDDRAWCMD       g_hdCmds[HD_MAX_CMDS];
+static UINT            g_hdCmdCount = 0;
+static BOOL            g_hdResetPending = FALSE;
+
+void
+PAL_HDResetFrameOnNextRecord(
+   void
+)
+{
+   g_hdResetPending = TRUE;
+}
+
+void
+PAL_HDRecordBlit(
+   uint64_t   hash,
+   INT        x,
+   INT        y,
+   BOOL       plain
+)
+{
+   if (g_hdResetPending)
+   {
+      g_hdCmdCount = 0;
+      g_hdResetPending = FALSE;
+   }
+   if (g_hdCmdCount >= HD_MAX_CMDS)
+   {
+      return;
+   }
+   g_hdCmds[g_hdCmdCount].hash  = hash;
+   g_hdCmds[g_hdCmdCount].x     = x;
+   g_hdCmds[g_hdCmdCount].y     = y;
+   g_hdCmds[g_hdCmdCount].plain = plain;
+   g_hdCmdCount++;
+}
+
+UINT
+PAL_HDGetFrameCommands(
+   const HDDRAWCMD  **ppCmds
+)
+{
+   if (ppCmds) *ppCmds = g_hdCmds;
+   return g_hdCmdCount;
+}
+
+UINT
+PAL_HDGetUniqueHashCount(
+   void
+)
+{
+   UINT i, j, unique = 0;
+   for (i = 0; i < g_hdCmdCount; i++)
+   {
+      BOOL seen = FALSE;
+      for (j = 0; j < i; j++)
+      {
+         if (g_hdCmds[j].hash == g_hdCmds[i].hash) { seen = TRUE; break; }
+      }
+      if (!seen) unique++;
+   }
+   return unique;
+}
