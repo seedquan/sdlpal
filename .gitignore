@@ -285,4 +285,4 @@ emscripten/*.cpp
 
 # HD asset pipeline build artifacts
 tools/hd_extract
-tools/hd_extract.dSYM/
+tools/hd_extract.dSYM/tools/hd_extract_fbp
