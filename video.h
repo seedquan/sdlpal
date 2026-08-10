@@ -38,6 +38,11 @@ extern SDL_Surface *gpScreen;
 extern SDL_Surface *gpScreenBak;
 extern volatile BOOL g_bRenderPaused;
 
+/* HD battle background state (set by PAL_LoadBattleBackground, cleared by PAL_StartBattle) */
+extern BOOL      g_hdBattleBgActive;
+extern uint64_t  g_hdBattleBgHash;
+extern BYTE      g_hdBattleBg[320 * 200];
+
 #if PAL_HAS_GLSL
 void Filter_StepParamSlot(int step);
 void Filter_StepCurrentParam(int step);

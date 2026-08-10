@@ -988,6 +988,14 @@ PAL_LoadBattleBackground(
    PAL_MKFDecompressChunk(buf, 320 * 200, gpGlobals->wNumBattleField, gpGlobals->f.fpFBP);
 
    //
+   // HD: remember the decompressed battle background + its hash so VIDEO_HD_Present
+   // can swap in an HD version. Cleared when the battle ends (PAL_StartBattle).
+   //
+   memcpy(g_hdBattleBg, buf, 320 * 200);
+   g_hdBattleBgHash = PAL_HashBytes(buf, 320 * 200);
+   g_hdBattleBgActive = TRUE;
+
+   //
    // Draw the picture to the surface.
    //
    PAL_FBPBlitToSurface(buf, g_Battle.lpBackground);
@@ -1851,6 +1859,7 @@ PAL_StartBattle(
    g_Battle.lpSceneBuf = NULL;
 
    gpGlobals->fInBattle = FALSE;
+   g_hdBattleBgActive = FALSE;
 
    AUDIO_PlayMusic(gpGlobals->wNumMusic, TRUE, 1);
 

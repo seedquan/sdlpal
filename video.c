@@ -55,6 +55,11 @@ static struct RenderBackend {
 static SDL_Texture *gpHDTexture = NULL;   /* 1280x800 ARGB8888 streaming */
 static uint32_t    *gpHDPixels  = NULL;   /* CPU compose buffer */
 static BOOL         g_hdOverlayOnly = FALSE; /* when TRUE, suppress base layer (debug) */
+
+/* HD battle background state — readable from battle.c via video.h externs */
+BOOL      g_hdBattleBgActive = FALSE;
+uint64_t  g_hdBattleBgHash   = 0;
+BYTE      g_hdBattleBg[320 * 200];
 #define HD_DEBUG 0
 
 static void VIDEO_HD_Ensure(void)
