@@ -55,7 +55,7 @@ static struct RenderBackend {
 static SDL_Texture *gpHDTexture = NULL;   /* 1280x800 ARGB8888 streaming */
 static uint32_t    *gpHDPixels  = NULL;   /* CPU compose buffer */
 static BOOL         g_hdOverlayOnly = FALSE; /* when TRUE, suppress base layer (debug) */
-#define HD_DEBUG 1
+#define HD_DEBUG 0
 
 static void VIDEO_HD_Ensure(void)
 {
