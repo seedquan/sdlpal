@@ -618,7 +618,6 @@ VIDEO_HD_Present(
    // Overlays: plain sprites this frame, colorized with the live palette.
    //
    {
-      BOOL g_paletteRef = HDAssets_PaletteMatchesReference(gpPalette->colors);
 #if HD_DEBUG
       static UINT s_hdaHits = 0;
       s_hdaHits = 0;
@@ -630,8 +629,10 @@ VIDEO_HD_Present(
          INT ow = 0, oh = 0, ox, oy;
          if (!cmds[c].plain || cmds[c].sprite == NULL) continue;
 
-         /* HD asset path: only when the live palette equals the baked reference. */
-         if (g_paletteRef)
+         /* HD asset path: always attempt. (v1 palette gate removed — real scene
+            palettes differ from palette-0 in unused entries, which wrongly blocked
+            HD in almost every scene. Faces use the palette-stable character indices.) */
+         if (1)
          {
             const uint8_t *hd = NULL; INT hw = 0, hh = 0;
             if (HDAssets_Get(cmds[c].hash, &hd, &hw, &hh) == 0 && hw <= HD_W && hh <= HD_H)
