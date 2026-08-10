@@ -13,6 +13,8 @@ void HDX_ParsePalette(const uint8_t *buf, int len, SDL_Color out[256]);
 int  HDX_RenderSprite(const uint8_t *rle, const SDL_Color *palette,
                       uint64_t *outHash, uint8_t *outRGBA, int *outW, int *outH);
 
+void HDX_RenderBitmap(const uint8_t *idx, const SDL_Color *palette, int w, int h, uint8_t *outRGBA);
+
 #ifdef __cplusplus
 }
 #endif

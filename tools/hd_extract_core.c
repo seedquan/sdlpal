@@ -57,3 +57,23 @@ HDX_RenderSprite(
    *outH = h;
    return 0;
 }
+
+void
+HDX_RenderBitmap(
+   const uint8_t   *idx,
+   const SDL_Color *palette,
+   int              w,
+   int              h,
+   uint8_t         *outRGBA
+)
+{
+   int i, n = w * h;
+   for (i = 0; i < n; i++)
+   {
+      SDL_Color c = palette[idx[i]];
+      outRGBA[i * 4 + 0] = c.r;
+      outRGBA[i * 4 + 1] = c.g;
+      outRGBA[i * 4 + 2] = c.b;
+      outRGBA[i * 4 + 3] = 255;
+   }
+}

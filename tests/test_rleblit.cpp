@@ -1365,3 +1365,13 @@ TEST(sdlpal, PAL_HashBytes) {
     EXPECT_EQ(0ull, PAL_HashBytes(NULL, 4));              // NULL guard
     EXPECT_EQ(14695981039346656037ull, PAL_HashBytes(a, 0)); // empty = offset basis
 }
+
+TEST(sdlpal, HDX_RenderBitmap) {
+    SDL_Color pal[256];
+    for (int i = 0; i < 256; i++) { pal[i].r = (uint8_t)i; pal[i].g = (uint8_t)(i+1); pal[i].b = (uint8_t)(i+2); pal[i].a = 255; }
+    uint8_t idx[2 * 1] = { 5, 200 };
+    uint8_t out[2 * 1 * 4];
+    HDX_RenderBitmap(idx, pal, 2, 1, out);
+    EXPECT_EQ(5,   out[0]);  EXPECT_EQ(6,   out[1]);  EXPECT_EQ(7,   out[2]);  EXPECT_EQ(255, out[3]);
+    EXPECT_EQ(200, out[4]);  EXPECT_EQ(201, out[5]);  EXPECT_EQ(202, out[6]);  EXPECT_EQ(255, out[7]);
+}
