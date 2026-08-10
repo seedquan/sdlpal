@@ -53,6 +53,8 @@ static struct RenderBackend {
 #define HD_H (200 * HD_SCALE)
 static SDL_Texture *gpHDTexture = NULL;   /* 1280x800 ARGB8888 streaming */
 static uint32_t    *gpHDPixels  = NULL;   /* CPU compose buffer */
+static BOOL         g_hdOverlayOnly = FALSE; /* when TRUE, suppress base layer (debug) */
+#define HD_DEBUG 1
 
 static void VIDEO_HD_Ensure(void)
 {
@@ -560,24 +562,44 @@ VIDEO_HD_Present(
 
    VIDEO_HD_Ensure();
 
+#if HD_DEBUG
+   {
+      static Uint32 last = 0; Uint32 now = SDL_GetTicks();
+      if (now - last > 1000) {
+         UTIL_LogOutput(LOGLEVEL_DEBUG, "[HD] cmds=%u unique=%u overlayOnly=%d\n",
+                        PAL_HDGetFrameCommands(NULL), PAL_HDGetUniqueHashCount(), g_hdOverlayOnly);
+         last = now;
+      }
+   }
+#endif
+
    //
    // Base layer: nearest-upscale gpScreenReal (already palette-colorized/faded).
    //
-   if (SDL_MUSTLOCK(gpScreenReal)) SDL_LockSurface(gpScreenReal);
+   if (!g_hdOverlayOnly)
    {
-      INT rowStride = gpScreenReal->pitch / (INT)sizeof(uint32_t);
-      src = (uint32_t *)gpScreenReal->pixels;
-      for (syi = 0; syi < HD_H; syi++)
+      if (SDL_MUSTLOCK(gpScreenReal)) SDL_LockSurface(gpScreenReal);
       {
-         INT sy = syi / HD_SCALE;
-         for (sxi = 0; sxi < HD_W; sxi++)
+         INT rowStride = gpScreenReal->pitch / (INT)sizeof(uint32_t);
+         src = (uint32_t *)gpScreenReal->pixels;
+         for (syi = 0; syi < HD_H; syi++)
          {
-            INT sx = sxi / HD_SCALE;
-            gpHDPixels[syi * HD_W + sxi] = src[sy * rowStride + sx] | 0xFF000000u;
+            INT sy = syi / HD_SCALE;
+            for (sxi = 0; sxi < HD_W; sxi++)
+            {
+               INT sx = sxi / HD_SCALE;
+               gpHDPixels[syi * HD_W + sxi] = src[sy * rowStride + sx] | 0xFF000000u;
+            }
          }
       }
+      if (SDL_MUSTLOCK(gpScreenReal)) SDL_UnlockSurface(gpScreenReal);
    }
-   if (SDL_MUSTLOCK(gpScreenReal)) SDL_UnlockSurface(gpScreenReal);
+   else
+   {
+      for (syi = 0; syi < HD_H; syi++)
+         for (sxi = 0; sxi < HD_W; sxi++)
+            gpHDPixels[syi * HD_W + sxi] = 0xFF000000u;  /* opaque black */
+   }
 
    //
    // Overlays: plain sprites this frame, colorized with the live palette.
