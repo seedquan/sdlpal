@@ -22,6 +22,7 @@
 #include "main.h"
 #include "palcommon.h"
 #include "palcfg.h"
+#include "hdassets.h"
 
 // Screen buffer
 SDL_Surface              *gpScreen           = NULL;
@@ -485,6 +486,8 @@ VIDEO_Shutdown(
    }
    gpHDPixels = NULL;
 
+   HDAssets_Free();
+
    if (gpRenderer)
    {
       SDL_DestroyRenderer(gpRenderer);
@@ -569,16 +572,6 @@ VIDEO_HD_Present(
       return;
    }
 
-#if HD_DEBUG
-   {
-      static Uint32 last = 0; Uint32 now = SDL_GetTicks();
-      if (now - last > 1000) {
-         UTIL_LogOutput(LOGLEVEL_DEBUG, "[HD] cmds=%u unique=%u overlayOnly=%d\n",
-                        PAL_HDGetFrameCommands(NULL), PAL_HDGetUniqueHashCount(), g_hdOverlayOnly);
-         last = now;
-      }
-   }
-#endif
 
    //
    // Base layer: nearest-upscale gpScreenReal (already palette-colorized/faded).
@@ -609,30 +602,92 @@ VIDEO_HD_Present(
    }
 
    //
+   // HD assets: lazy one-time init (game data is ready by first present),
+   // and compute the per-frame palette gate once.
+   //
+   {
+      static BOOL s_hdaInit = FALSE;
+      if (!s_hdaInit)
+      {
+         HDAssets_Init("hd_assets", PAL_GetPalette(0, FALSE));
+         s_hdaInit = TRUE;
+      }
+   }
+
+   //
    // Overlays: plain sprites this frame, colorized with the live palette.
    //
-   n = PAL_HDGetFrameCommands(&cmds);
-   for (c = 0; c < n; c++)
    {
-      static uint32_t spr[HD_W * HD_H];
-      INT ow = 0, oh = 0, ox, oy;
-      if (!cmds[c].plain || cmds[c].sprite == NULL) continue;
-      if (PAL_HDRenderSprite(cmds[c].sprite, gpPalette->colors, HD_SCALE, spr, &ow, &oh) != 0)
-         continue;
-      if (ow > HD_W || oh > HD_H) continue;
-      for (oy = 0; oy < oh; oy++)
+      BOOL g_paletteRef = HDAssets_PaletteMatchesReference(gpPalette->colors);
+#if HD_DEBUG
+      static UINT s_hdaHits = 0;
+      s_hdaHits = 0;
+#endif
+      n = PAL_HDGetFrameCommands(&cmds);
+      for (c = 0; c < n; c++)
       {
-         INT dyv = cmds[c].y * HD_SCALE + oy;
-         if (dyv < 0 || dyv >= HD_H) continue;
-         for (ox = 0; ox < ow; ox++)
+         static uint32_t spr[HD_W * HD_H];
+         INT ow = 0, oh = 0, ox, oy;
+         if (!cmds[c].plain || cmds[c].sprite == NULL) continue;
+
+         /* HD asset path: only when the live palette equals the baked reference. */
+         if (g_paletteRef)
          {
-            INT dxv = cmds[c].x * HD_SCALE + ox;
-            uint32_t px = spr[oy * ow + ox];
-            if (dxv < 0 || dxv >= HD_W) continue;
-            if (px & 0xFF000000u)                 /* opaque only */
-               gpHDPixels[dyv * HD_W + dxv] = px;
+            const uint8_t *hd = NULL; INT hw = 0, hh = 0;
+            if (HDAssets_Get(cmds[c].hash, &hd, &hw, &hh) == 0 && hw <= HD_W && hh <= HD_H)
+            {
+               INT ax, ay;
+               for (ay = 0; ay < hh; ay++)
+               {
+                  INT dyv = cmds[c].y * HD_SCALE + ay;
+                  if (dyv < 0 || dyv >= HD_H) continue;
+                  for (ax = 0; ax < hw; ax++)
+                  {
+                     INT dxv = cmds[c].x * HD_SCALE + ax;
+                     const uint8_t *pp = hd + (ay * hw + ax) * 4;
+                     if (dxv < 0 || dxv >= HD_W) continue;
+                     if (pp[3])   /* opaque only */
+                        gpHDPixels[dyv * HD_W + dxv] =
+                           ((uint32_t)pp[3] << 24) | ((uint32_t)pp[0] << 16) |
+                           ((uint32_t)pp[1] << 8)  | (uint32_t)pp[2];
+                  }
+               }
+#if HD_DEBUG
+               s_hdaHits++;
+#endif
+               continue;   /* HD asset drawn — skip the placeholder */
+            }
+         }
+         /* else: fall through to the existing PAL_HDRenderSprite placeholder below */
+
+         if (PAL_HDRenderSprite(cmds[c].sprite, gpPalette->colors, HD_SCALE, spr, &ow, &oh) != 0)
+            continue;
+         if (ow > HD_W || oh > HD_H) continue;
+         for (oy = 0; oy < oh; oy++)
+         {
+            INT dyv = cmds[c].y * HD_SCALE + oy;
+            if (dyv < 0 || dyv >= HD_H) continue;
+            for (ox = 0; ox < ow; ox++)
+            {
+               INT dxv = cmds[c].x * HD_SCALE + ox;
+               uint32_t px = spr[oy * ow + ox];
+               if (dxv < 0 || dxv >= HD_W) continue;
+               if (px & 0xFF000000u)                 /* opaque only */
+                  gpHDPixels[dyv * HD_W + dxv] = px;
+            }
          }
       }
+#if HD_DEBUG
+      {
+         static Uint32 last = 0; Uint32 now = SDL_GetTicks();
+         if (now - last > 1000) {
+            UTIL_LogOutput(LOGLEVEL_DEBUG, "[HD] cmds=%u unique=%u overlayOnly=%d hdaHits=%u\n",
+                           PAL_HDGetFrameCommands(NULL), PAL_HDGetUniqueHashCount(), g_hdOverlayOnly,
+                           s_hdaHits);
+            last = now;
+         }
+      }
+#endif
    }
 
    SDL_UpdateTexture(gpHDTexture, NULL, gpHDPixels, HD_W * (INT)sizeof(uint32_t));
@@ -1621,3 +1676,30 @@ VIDEO_DrawSurfaceToScreen(
    SDL_FreeSurface(pCompatSurface);
 #endif
 }
+
+/* Unity build: provide stbi_load for hdassets.c.
+   video_glsl.c already compiles stb_image (without STDIO) so the non-STDIO stbi_*
+   symbols (including stbi_load_from_memory and stbi_image_free) are already linked in.
+   We just need the file-path entry point that hdassets.c calls via its extern declaration. */
+extern unsigned char *stbi_load_from_memory(const unsigned char *buf, int len,
+                                            int *x, int *y, int *comp, int req);
+
+unsigned char *
+stbi_load(const char *filename, int *x, int *y, int *comp, int req)
+{
+   unsigned char *buf, *img = NULL;
+   long sz;
+   FILE *f = fopen(filename, "rb");
+   if (!f) return NULL;
+   fseek(f, 0, SEEK_END); sz = ftell(f); fseek(f, 0, SEEK_SET);
+   if (sz <= 0) { fclose(f); return NULL; }
+   buf = (unsigned char *)malloc((size_t)sz);
+   if (buf && fread(buf, 1, (size_t)sz, f) == (size_t)sz)
+      img = stbi_load_from_memory(buf, (int)sz, x, y, comp, req);
+   free(buf);
+   fclose(f);
+   return img;
+}
+
+/* Unity build: pull hdassets.c into the Pal target without a project-file change. */
+#include "hdassets.c"
