@@ -1277,3 +1277,24 @@ TEST(sdlpal, HDX_ParsePaletteScales) {
     EXPECT_EQ((uint8_t)(buf[3 * 7 + 2] << 2), out[7].b);
     EXPECT_EQ(255, out[10].a);
 }
+
+extern "C" {
+    #include "hd_png.h"
+}
+// stb_image.h reader is already in the repo root; declare the one function we use.
+extern "C" unsigned char *stbi_load(const char *filename, int *x, int *y, int *comp, int req_comp);
+extern "C" void stbi_image_free(void *retval_from_stbi_load);
+
+TEST(sdlpal, HDX_WritePNGRoundTrip) {
+    // 2x1 RGBA: pixel0 = (10,20,30,255), pixel1 = (40,50,60,128)
+    uint8_t px[2 * 1 * 4] = { 10,20,30,255,  40,50,60,128 };
+    const char *path = "/tmp/hdx_test.png";
+    ASSERT_EQ(0, HDX_WritePNG(path, px, 2, 1));
+    int x = 0, y = 0, comp = 0;
+    unsigned char *img = stbi_load(path, &x, &y, &comp, 4);
+    ASSERT_NE((unsigned char *)NULL, img);
+    EXPECT_EQ(2, x); EXPECT_EQ(1, y);
+    EXPECT_EQ(10, img[0]); EXPECT_EQ(20, img[1]); EXPECT_EQ(30, img[2]); EXPECT_EQ(255, img[3]);
+    EXPECT_EQ(128, img[7]);
+    stbi_image_free(img);
+}
