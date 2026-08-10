@@ -1298,3 +1298,61 @@ TEST(sdlpal, HDX_WritePNGRoundTrip) {
     EXPECT_EQ(128, img[7]);
     stbi_image_free(img);
 }
+
+extern "C" {
+    #include "hdassets.h"
+}
+#include <sys/stat.h>
+
+TEST(sdlpal, HDAssets_GetAndCache) {
+    uint64_t hash = 0xABCDEF1234567890ull;
+    uint8_t px[3 * 2 * 4];
+    for (int i = 0; i < 3 * 2 * 4; i++) px[i] = (uint8_t)i;
+    const char *dir = "/tmp/hda_test";
+    mkdir(dir, 0755);
+    char p[256];
+    snprintf(p, sizeof(p), "%s/%016llx.png", dir, (unsigned long long)hash);
+    ASSERT_EQ(0, HDX_WritePNG(p, px, 3, 2));
+
+    SDL_Color ref[256];
+    for (int i = 0; i < 256; i++) { ref[i].r = (uint8_t)i; ref[i].g = 0; ref[i].b = 0; ref[i].a = 255; }
+    HDAssets_Init(dir, ref);
+
+    const uint8_t *rgba = NULL; INT w = 0, h = 0;
+    ASSERT_EQ(0, HDAssets_Get(hash, &rgba, &w, &h));
+    EXPECT_EQ(3, w);
+    EXPECT_EQ(2, h);
+    EXPECT_EQ(0, rgba[0]);   // pixel0 R
+    EXPECT_EQ(1, rgba[1]);   // pixel0 G
+
+    // Miss (negative cache) returns -1.
+    const uint8_t *rgbaM = NULL; INT wm = 0, hm = 0;
+    EXPECT_EQ(-1, HDAssets_Get(0x1111ull, &rgbaM, &wm, &hm));
+
+    // Second get is served from cache — same pointer, no reload.
+    const uint8_t *rgba2 = NULL;
+    ASSERT_EQ(0, HDAssets_Get(hash, &rgba2, &w, &h));
+    EXPECT_EQ(rgba, rgba2);
+
+    HDAssets_Free();
+}
+
+TEST(sdlpal, HDAssets_PaletteGate) {
+    SDL_Color ref[256];
+    for (int i = 0; i < 256; i++) { ref[i].r = (uint8_t)i; ref[i].g = 0; ref[i].b = 0; ref[i].a = 255; }
+    HDAssets_Init("/tmp/hda_none", ref);
+
+    SDL_Color live[256];
+    memcpy(live, ref, sizeof(ref));
+    EXPECT_TRUE(HDAssets_PaletteMatchesReference(live));
+
+    live[100].r = (uint8_t)(live[100].r ^ 0xFF);
+    EXPECT_FALSE(HDAssets_PaletteMatchesReference(live));
+
+    // Alpha differences are ignored.
+    memcpy(live, ref, sizeof(ref));
+    live[50].a = 0;
+    EXPECT_TRUE(HDAssets_PaletteMatchesReference(live));
+
+    HDAssets_Free();
+}

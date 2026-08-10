@@ -45,6 +45,9 @@ echo "[2d/6] compile stb_image reader impl TU"
 printf '#define STB_IMAGE_IMPLEMENTATION\n#include "stb_image.h"\n' > "$OUT/stbi_impl.c"
 clang -c "$OUT/stbi_impl.c" -o "$OUT/stbi_impl.o" -I"$ROOT"
 
+echo "[2d/6] compile hdassets.c"
+clang -c "$ROOT/hdassets.c" -o "$OUT/hdassets.o" -DUSE_SDL3=1 -DHAVE_CONFIG_H "${INC[@]}"
+
 echo "[2/6] compile sdl_compat.c + stubs"
 clang -c "$ROOT/sdl_compat/sdl_compat.c" -o "$OUT/sdl_compat.o" -DUSE_SDL3=1 -DHAVE_CONFIG_H "${INC[@]}"
 clang -c "$ROOT/tests/standalone-stubs.c" -o "$OUT/stubs.o" -DUSE_SDL3=1 -DHAVE_CONFIG_H "${INC[@]}"
@@ -62,6 +65,7 @@ clang++ -std=c++14 -c "$OUT/tmain.cpp" -o "$OUT/tmain.o" "${GTINC[@]}"
 
 echo "[6/6] link + run"
 clang++ "$OUT/palcommon.o" "$OUT/hd_extract_core.o" "$OUT/hd_png.o" "$OUT/stbi_impl.o" \
+  "$OUT/hdassets.o" \
   "$OUT/sdl_compat.o" "$OUT/stubs.o" "$OUT/test_rleblit.o" \
   "$OUT/gtest-all.o" "$OUT/tmain.o" \
   -o "$OUT/paltests" -F"$FW" -framework SDL3 -framework Cocoa -framework OpenGL
