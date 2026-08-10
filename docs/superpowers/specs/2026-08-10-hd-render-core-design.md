@@ -119,3 +119,17 @@ SDLPal 的整条画面管线本质上是一块 **320×200、8-bit 调色板(pale
 - **B(HD 资源管线):** 离线抽取 `.mkf` → AI 超分 → 按 `(内容哈希)` 存高清纹理;哈希算法与 §4.1 完全一致。
 - **C(HD 资源接入):** 用查表结果替换 §4.3 的占位放大;先背景后角色;扩展 §5 其余特效。
 - **D(HD UI/文字):** 在高清平面上新增真彩叠加层渲染高分辨率字体/UI。
+
+## 12. 已知限制(spike 完成时,留给后续子项目)
+
+以下项在整支分支的最终评审中被识别,已确认不影响 spike 的核心目标,留待 B/C/D 处理:
+
+- **过场呈现路径未接 HD(I1):** `VIDEO_SwitchScreen`、`VIDEO_FadeScreen`、`VIDEO_DrawSurfaceToScreen` 直接走经典 `RenderCopy`,所以战斗开场转场、脚本淡入淡出擦除、AVI 播放这几帧会以经典分辨率呈现(画面会"跳"一下分辨率),不崩溃。→ 子项目 C 统一接入 HD 呈现。
+- **HD 模式丢失黑边/宽高比(I2):** `VIDEO_HD_Present` 把高清纹理铺满窗口,忽略了经典路径的 `gTextureRect` letterbox。非 16:10 窗口下 HD 画面会拉伸。→ 用同一套 `gTextureRect` 计算目标矩形修正。
+- **无帧内哈希缓存 / 每帧重解码(M2):** 每个 plain blit 走两遍精灵(长度+哈希),且 present 每帧重新解码+放大所有精灵。cmds≈10 时无感,战斗多精灵时需优化。→ 子项目 C 引入按哈希缓存的高清纹理(正好是接 AI 资源的形态)。
+- **哈希遍历对畸形输入无长度上界(M3):** `PAL_HashSprite` 的遍历在截断/损坏的 RLE 上可能越界读。正规 MKF 数据无风险;可加可选 max-length 参数加固。
+- **RLE 游程规则散落多处(M4,DRY):** blit 解码器、`PAL_RLESpriteBytes`、`PAL_HDRenderSprite` 各有一份遍历,规则一致但未抽公共 `PAL_RLEWalk` 助手。后续可提取以防漂移。
+
+**已在 spike 内修复的最终评审发现:**
+- **Critical(C1)use-after-free:** 绘制命令缓冲存原始精灵指针,场景切换/战斗结束"先释放精灵、后 present(淡变)、再 blit"的窗口会重放已释放指针。已加 `PAL_HDInvalidateCommands()` 并在所有精灵释放点(`PAL_FreeResources`、`PAL_LoadResources` 重载分支、`PAL_FreeBattleSprites`)调用;命令清空后 present 仍渲染放大底层,画面完整。
+- **M5 分配失败保护:** `VIDEO_HD_Present` 在 HD 缓冲分配失败时回退经典呈现。
