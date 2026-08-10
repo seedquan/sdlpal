@@ -223,6 +223,12 @@ PAL_HashSprite(
    LPCBITMAPRLE      lpBitmapRLE
 );
 
+uint64_t
+PAL_HashBytes(
+   const void   *data,
+   size_t        len
+);
+
 typedef struct tagHDDRAWCMD {
    uint64_t      hash;       /* PAL_HashSprite of the sprite */
    LPCBITMAPRLE  sprite;     /* pointer to the RLE sprite (valid within the frame) */

@@ -895,6 +895,47 @@ PAL_HashSprite(
    return hash;
 }
 
+uint64_t
+PAL_HashBytes(
+   const void   *data,
+   size_t        len
+)
+/*++
+  Purpose:
+
+    Compute a FNV-1a 64-bit content hash of a flat byte buffer.
+
+  Parameters:
+
+    [IN]  data - pointer to the byte buffer.
+    [IN]  len  - number of bytes to hash.
+
+  Return value:
+
+    0 if data is NULL.
+    FNV-1a 64-bit offset basis if len is 0.
+    FNV-1a 64-bit hash of the buffer otherwise.
+
+--*/
+{
+   const uint64_t   FNV_OFFSET = 14695981039346656037ull;
+   const uint64_t   FNV_PRIME  = 1099511628211ull;
+   uint64_t         hash = FNV_OFFSET;
+   const uint8_t   *p = (const uint8_t *)data;
+   size_t           i;
+
+   if (data == NULL)
+   {
+      return 0;
+   }
+   for (i = 0; i < len; i++)
+   {
+      hash ^= (uint64_t)p[i];
+      hash *= FNV_PRIME;
+   }
+   return hash;
+}
+
 WORD
 PAL_SpriteGetNumFrames(
    LPCSPRITE       lpSprite

@@ -1356,3 +1356,12 @@ TEST(sdlpal, HDAssets_PaletteGate) {
 
     HDAssets_Free();
 }
+
+TEST(sdlpal, PAL_HashBytes) {
+    uint8_t a[4] = { 1, 2, 3, 4 };
+    uint8_t b[4] = { 1, 2, 3, 5 };
+    EXPECT_EQ(PAL_HashBytes(a, 4), PAL_HashBytes(a, 4));  // stable
+    EXPECT_NE(PAL_HashBytes(a, 4), PAL_HashBytes(b, 4));  // sensitive
+    EXPECT_EQ(0ull, PAL_HashBytes(NULL, 4));              // NULL guard
+    EXPECT_EQ(14695981039346656037ull, PAL_HashBytes(a, 0)); // empty = offset basis
+}
