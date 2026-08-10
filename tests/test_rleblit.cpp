@@ -1224,3 +1224,27 @@ TEST(sdlpal, PAL_HDDrawCommandBuffer) {
     EXPECT_EQ(1u, PAL_HDGetFrameCommands(&cmds));
     EXPECT_EQ(0xCCCCull, cmds[0].hash);
 }
+
+TEST(sdlpal, PAL_HDRenderSprite) {
+    // width=2, height=1; token 0x02 => opaque run of 2 pixels: idx 5, idx 6.
+    BYTE spr[] = { 0x02,0x00, 0x01,0x00, 0x02, 0x05, 0x06 };
+    SDL_Color pal[256]; memset(pal, 0, sizeof(pal));
+    pal[5].r = 0x10; pal[5].g = 0x20; pal[5].b = 0x30; pal[5].a = 0xFF;
+    pal[6].r = 0x40; pal[6].g = 0x50; pal[6].b = 0x60; pal[6].a = 0xFF;
+
+    uint32_t out[4 * 2]; INT ow = 0, oh = 0;
+    INT rc = PAL_HDRenderSprite(spr, pal, 2, out, &ow, &oh);
+    EXPECT_EQ(0, rc);
+    EXPECT_EQ(4, ow);
+    EXPECT_EQ(2, oh);
+
+    // ARGB8888: top-left 2x2 block = index 5 color, opaque.
+    uint32_t c5 = (0xFFu<<24)|(0x10u<<16)|(0x20u<<8)|0x30u;
+    uint32_t c6 = (0xFFu<<24)|(0x40u<<16)|(0x50u<<8)|0x60u;
+    EXPECT_EQ(c5, out[0]);            // (0,0)
+    EXPECT_EQ(c5, out[1]);            // (1,0)
+    EXPECT_EQ(c6, out[2]);            // (2,0)
+    EXPECT_EQ(c6, out[4 + 2]);        // (2,1) — row 1, col 2: source pixel (1,0) = idx 6
+
+    EXPECT_EQ(-1, PAL_HDRenderSprite(NULL, pal, 2, out, &ow, &oh));
+}

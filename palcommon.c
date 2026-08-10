@@ -1318,3 +1318,84 @@ PAL_HDGetUniqueHashCount(
    }
    return unique;
 }
+
+INT
+PAL_HDRenderSprite(
+   LPCBITMAPRLE      lpBitmapRLE,
+   const SDL_Color  *palette,
+   INT               scale,
+   uint32_t         *out,
+   INT              *outW,
+   INT              *outH
+)
+{
+   UINT   uiWidth, uiHeight, uiTotal, i = 0;
+   INT    sx, sy, dx, dy;
+   BYTE   T;
+   static BYTE  idx[320 * 200];      /* max sprite fits in screen bounds */
+   static BYTE  cov[320 * 200];      /* coverage: 1 = opaque */
+   UINT   pos = 0;
+
+   if (lpBitmapRLE == NULL || out == NULL || scale <= 0)
+   {
+      return -1;
+   }
+   if (lpBitmapRLE[0] == 0x02 && lpBitmapRLE[1] == 0x00 &&
+       lpBitmapRLE[2] == 0x00 && lpBitmapRLE[3] == 0x00)
+   {
+      lpBitmapRLE += 4;
+   }
+   uiWidth  = lpBitmapRLE[0] | (lpBitmapRLE[1] << 8);
+   uiHeight = lpBitmapRLE[2] | (lpBitmapRLE[3] << 8);
+   uiTotal  = uiWidth * uiHeight;
+   if (uiTotal == 0 || uiTotal > sizeof(idx)) return -1;
+   lpBitmapRLE += 4;
+
+   memset(cov, 0, uiTotal);
+   while (i < uiTotal)
+   {
+      T = *lpBitmapRLE++;
+      if ((T & 0x80) && T <= 0x80 + uiWidth)
+      {
+         i += T - 0x80;              /* transparent run */
+      }
+      else
+      {
+         UINT k;
+         for (k = 0; k < T && i < uiTotal; k++, i++)
+         {
+            idx[i] = *lpBitmapRLE++;
+            cov[i] = 1;
+         }
+      }
+   }
+
+   *outW = (INT)uiWidth * scale;
+   *outH = (INT)uiHeight * scale;
+   for (sy = 0; sy < (INT)uiHeight; sy++)
+   {
+      for (sx = 0; sx < (INT)uiWidth; sx++)
+      {
+         UINT     s = sy * uiWidth + sx;
+         uint32_t argb;
+         if (cov[s])
+         {
+            SDL_Color c = palette[idx[s]];
+            argb = (0xFFu << 24) | ((uint32_t)c.r << 16) | ((uint32_t)c.g << 8) | c.b;
+         }
+         else
+         {
+            argb = 0;                /* transparent */
+         }
+         for (dy = 0; dy < scale; dy++)
+         {
+            for (dx = 0; dx < scale; dx++)
+            {
+               pos = (sy * scale + dy) * (*outW) + (sx * scale + dx);
+               out[pos] = argb;
+            }
+         }
+      }
+   }
+   return 0;
+}

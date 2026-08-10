@@ -234,6 +234,20 @@ void        PAL_HDRecordBlit(uint64_t hash, INT x, INT y, BOOL plain);
 UINT        PAL_HDGetFrameCommands(const HDDRAWCMD **ppCmds);  /* returns count, sets *ppCmds */
 UINT        PAL_HDGetUniqueHashCount(void);        /* distinct hashes in current frame */
 
+/* Decode the sprite to indices, nearest-upscale by `scale`, colorize via `palette`.
+   Writes ARGB8888 into `out` (caller-allocated, (w*scale)*(h*scale) uint32).
+   Transparent (uncovered) pixels get alpha 0. Sets *outW and *outH to the scaled size.
+   Returns 0 on success, -1 on NULL/zero-size. */
+INT
+PAL_HDRenderSprite(
+   LPCBITMAPRLE      lpBitmapRLE,
+   const SDL_Color  *palette,
+   INT               scale,
+   uint32_t         *out,
+   INT              *outW,
+   INT              *outH
+);
+
 WORD
 PAL_SpriteGetNumFrames(
    LPCSPRITE       lpSprite
