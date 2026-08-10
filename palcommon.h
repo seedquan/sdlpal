@@ -212,6 +212,16 @@ PAL_RLEGetHeight(
    LPCBITMAPRLE      lpBitmapRLE
 );
 
+UINT
+PAL_RLESpriteBytes(
+   LPCBITMAPRLE      lpBitmapRLE
+);
+
+uint64_t
+PAL_HashSprite(
+   LPCBITMAPRLE      lpBitmapRLE
+);
+
 WORD
 PAL_SpriteGetNumFrames(
    LPCSPRITE       lpSprite

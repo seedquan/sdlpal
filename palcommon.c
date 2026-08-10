@@ -772,6 +772,115 @@ PAL_RLEGetHeight(
    return lpBitmapRLE[2] | (lpBitmapRLE[3] << 8);
 }
 
+UINT
+PAL_RLESpriteBytes(
+   LPCBITMAPRLE      lpBitmapRLE
+)
+/*++
+  Purpose:
+
+    Get the total byte length of an RLE-compressed sprite (including the optional
+    4-byte 0x00000002 file prefix, the 4-byte width/height header, and all RLE data).
+
+  Parameters:
+
+    [IN]  lpBitmapRLE - pointer to the RLE-compressed bitmap.
+
+  Return value:
+
+    Total byte length of the sprite, or 0 if lpBitmapRLE is NULL.
+
+--*/
+{
+   UINT uiPrefix = 0, uiWidth, uiHeight, uiTotal, uiProduced = 0, uiBytes = 0;
+   BYTE T;
+
+   if (lpBitmapRLE == NULL)
+   {
+      return 0;
+   }
+
+   if (lpBitmapRLE[0] == 0x02 && lpBitmapRLE[1] == 0x00 &&
+       lpBitmapRLE[2] == 0x00 && lpBitmapRLE[3] == 0x00)
+   {
+      lpBitmapRLE += 4;
+      uiPrefix = 4;
+   }
+
+   uiWidth  = lpBitmapRLE[0] | (lpBitmapRLE[1] << 8);
+   uiHeight = lpBitmapRLE[2] | (lpBitmapRLE[3] << 8);
+   uiTotal  = uiWidth * uiHeight;
+   lpBitmapRLE += 4;
+   uiBytes = 4;
+
+   while (uiProduced < uiTotal)
+   {
+      T = *lpBitmapRLE++;
+      uiBytes++;
+      if ((T & 0x80) && T <= 0x80 + uiWidth)
+      {
+         uiProduced += T - 0x80;
+      }
+      else
+      {
+         uiProduced += T;
+         lpBitmapRLE += T;
+         uiBytes += T;
+      }
+   }
+
+   return uiPrefix + uiBytes;
+}
+
+uint64_t
+PAL_HashSprite(
+   LPCBITMAPRLE      lpBitmapRLE
+)
+/*++
+  Purpose:
+
+    Compute a FNV-1a 64-bit content hash of an RLE-compressed sprite.
+    The optional 4-byte 0x00000002 file prefix is stripped before hashing so
+    that the same sprite data produces the same hash regardless of whether the
+    prefix is present.
+
+  Parameters:
+
+    [IN]  lpBitmapRLE - pointer to the RLE-compressed bitmap.
+
+  Return value:
+
+    64-bit FNV-1a hash of the prefix-stripped sprite content, or 0 if NULL.
+
+--*/
+{
+   const uint64_t   FNV_OFFSET = 14695981039346656037ull;
+   const uint64_t   FNV_PRIME  = 1099511628211ull;
+   uint64_t         hash = FNV_OFFSET;
+   UINT             uiBytes, i, uiPrefix = 0;
+   LPCBITMAPRLE     p = lpBitmapRLE;
+
+   if (lpBitmapRLE == NULL)
+   {
+      return 0;
+   }
+
+   if (p[0] == 0x02 && p[1] == 0x00 && p[2] == 0x00 && p[3] == 0x00)
+   {
+      uiPrefix = 4;
+   }
+
+   uiBytes = PAL_RLESpriteBytes(lpBitmapRLE);
+   p = lpBitmapRLE + uiPrefix;            /* hash prefix-stripped content */
+   for (i = 0; i < uiBytes - uiPrefix; i++)
+   {
+      hash ^= (uint64_t)p[i];
+      hash *= FNV_PRIME;
+   }
+
+   return hash;
+}
+
 WORD
 PAL_SpriteGetNumFrames(
    LPCSPRITE       lpSprite

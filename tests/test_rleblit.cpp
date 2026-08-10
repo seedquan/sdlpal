@@ -1,4 +1,6 @@
 #include <gtest/gtest.h>
+#include <vector>
+#include <cstring>
 extern "C"{
     #include "palcommon.h"
 }
@@ -1160,3 +1162,36 @@ TEST(sdlpal, PAL_RLEBlitMonoColor) {
     SDL_FreeSurface(surface);
 }
 
+
+TEST(sdlpal, PAL_RLESpriteBytes) {
+    // bitmap[] has no 0x02 prefix; width/height are in bytes [0..3].
+    UINT w = bitmap[0] | (bitmap[1] << 8);
+    UINT h = bitmap[2] | (bitmap[3] << 8);
+    UINT n = PAL_RLESpriteBytes(bitmap);
+    // Length must cover at least the 4-byte header and be within the array.
+    EXPECT_GT(n, 4u);
+    EXPECT_LE(n, (UINT)sizeof(bitmap));
+    // NULL is handled.
+    EXPECT_EQ(0u, PAL_RLESpriteBytes(NULL));
+    (void)w; (void)h;
+}
+
+TEST(sdlpal, PAL_HashSprite) {
+    uint64_t a = PAL_HashSprite(bitmap);
+    uint64_t b = PAL_HashSprite(bitmap);
+    EXPECT_EQ(a, b);                 // stable
+    EXPECT_NE(0ull, a);              // non-trivial
+    EXPECT_EQ(0ull, PAL_HashSprite(NULL));
+
+    // A copy WITH the optional 0x02 prefix must hash identically (prefix-independent).
+    UINT n = PAL_RLESpriteBytes(bitmap);
+    std::vector<BYTE> withPrefix(4 + n);
+    withPrefix[0] = 0x02; withPrefix[1] = 0; withPrefix[2] = 0; withPrefix[3] = 0;
+    memcpy(withPrefix.data() + 4, bitmap, n);
+    EXPECT_EQ(a, PAL_HashSprite(withPrefix.data()));
+
+    // A one-byte change in the data must change the hash.
+    std::vector<BYTE> mutated(bitmap, bitmap + n);
+    mutated[n - 1] ^= 0xFF;
+    EXPECT_NE(a, PAL_HashSprite(mutated.data()));
+}
