@@ -142,6 +142,11 @@ VIDEO_RenderCopy(
     VOID
 );
 
+void
+VIDEO_HD_Present(
+    void
+);
+
 VOID
 VIDEO_SetupTouchArea(
     int window_w,

@@ -95,7 +95,7 @@ PAL_RLEBlitToSurfaceWithShadow(
    //
    if (gConfig.fHDRemaster && !bShadow)
    {
-      PAL_HDRecordBlit(PAL_HashSprite(lpBitmapRLE), dx, dy, TRUE);
+      PAL_HDRecordBlit(PAL_HashSprite(lpBitmapRLE), lpBitmapRLE, dx, dy, TRUE);
    }
 
    //
@@ -1278,10 +1278,11 @@ PAL_HDResetFrameOnNextRecord(
 
 void
 PAL_HDRecordBlit(
-   uint64_t   hash,
-   INT        x,
-   INT        y,
-   BOOL       plain
+   uint64_t      hash,
+   LPCBITMAPRLE  sprite,
+   INT           x,
+   INT           y,
+   BOOL          plain
 )
 {
    if (g_hdResetPending)
@@ -1293,10 +1294,11 @@ PAL_HDRecordBlit(
    {
       return;
    }
-   g_hdCmds[g_hdCmdCount].hash  = hash;
-   g_hdCmds[g_hdCmdCount].x     = x;
-   g_hdCmds[g_hdCmdCount].y     = y;
-   g_hdCmds[g_hdCmdCount].plain = plain;
+   g_hdCmds[g_hdCmdCount].hash   = hash;
+   g_hdCmds[g_hdCmdCount].sprite = sprite;
+   g_hdCmds[g_hdCmdCount].x      = x;
+   g_hdCmds[g_hdCmdCount].y      = y;
+   g_hdCmds[g_hdCmdCount].plain  = plain;
    g_hdCmdCount++;
 }
 

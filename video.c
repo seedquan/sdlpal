@@ -20,6 +20,8 @@
 //
 #include <float.h>
 #include "main.h"
+#include "palcommon.h"
+#include "palcfg.h"
 
 // Screen buffer
 SDL_Surface              *gpScreen           = NULL;
@@ -44,6 +46,27 @@ static struct RenderBackend {
     SDL_Texture *(*CreateTexture)(int width, int height);
     void (*RenderCopy)();
 } gRenderBackend;
+
+/* HD remaster: compose buffer and texture */
+#define HD_SCALE 4
+#define HD_W (320 * HD_SCALE)
+#define HD_H (200 * HD_SCALE)
+static SDL_Texture *gpHDTexture = NULL;   /* 1280x800 ARGB8888 streaming */
+static uint32_t    *gpHDPixels  = NULL;   /* CPU compose buffer */
+
+static void VIDEO_HD_Ensure(void)
+{
+   if (gpHDTexture == NULL)
+   {
+      gpHDTexture = SDL_CreateTexture(gpRenderer, SDL_PIXELFORMAT_ARGB8888,
+                                      SDL_TEXTUREACCESS_STREAMING, HD_W, HD_H);
+   }
+   if (gpHDPixels == NULL)
+   {
+      gpHDPixels = (uint32_t *)malloc(sizeof(uint32_t) * HD_W * HD_H);
+   }
+}
+
 #else
 #undef PAL_HAS_GLSL
 #endif
@@ -448,6 +471,18 @@ VIDEO_Shutdown(
    }
    gpTexture = NULL;
 
+   if (gpHDTexture)
+   {
+      SDL_DestroyTexture(gpHDTexture);
+   }
+   gpHDTexture = NULL;
+
+   if (gpHDPixels)
+   {
+      free(gpHDPixels);
+   }
+   gpHDPixels = NULL;
+
    if (gpRenderer)
    {
       SDL_DestroyRenderer(gpRenderer);
@@ -512,6 +547,66 @@ VIDEO_RenderCopy(
 	SDL_RenderPresent(gpRenderer);
 }
 #endif
+
+void
+VIDEO_HD_Present(
+   void
+)
+{
+   const HDDRAWCMD *cmds = NULL;
+   UINT n, c;
+   INT sxi, syi;
+   uint32_t *src;
+
+   VIDEO_HD_Ensure();
+
+   //
+   // Base layer: nearest-upscale gpScreenReal (already palette-colorized/faded).
+   //
+   src = (uint32_t *)gpScreenReal->pixels;
+   for (syi = 0; syi < HD_H; syi++)
+   {
+      INT sy = syi / HD_SCALE;
+      for (sxi = 0; sxi < HD_W; sxi++)
+      {
+         INT sx = sxi / HD_SCALE;
+         gpHDPixels[syi * HD_W + sxi] = src[sy * gpScreenReal->w + sx] | 0xFF000000u;
+      }
+   }
+
+   //
+   // Overlays: plain sprites this frame, colorized with the live palette.
+   //
+   n = PAL_HDGetFrameCommands(&cmds);
+   for (c = 0; c < n; c++)
+   {
+      static uint32_t spr[HD_W * HD_H];
+      INT ow = 0, oh = 0, ox, oy;
+      if (!cmds[c].plain || cmds[c].sprite == NULL) continue;
+      if (PAL_HDRenderSprite(cmds[c].sprite, gpPalette->colors, HD_SCALE, spr, &ow, &oh) != 0)
+         continue;
+      for (oy = 0; oy < oh; oy++)
+      {
+         INT dyv = cmds[c].y * HD_SCALE + oy;
+         if (dyv < 0 || dyv >= HD_H) continue;
+         for (ox = 0; ox < ow; ox++)
+         {
+            INT dxv = cmds[c].x * HD_SCALE + ox;
+            uint32_t px = spr[oy * ow + ox];
+            if (dxv < 0 || dxv >= HD_W) continue;
+            if (px & 0xFF000000u)                 /* opaque only */
+               gpHDPixels[dyv * HD_W + dxv] = px;
+         }
+      }
+   }
+
+   SDL_UpdateTexture(gpHDTexture, NULL, gpHDPixels, HD_W * (INT)sizeof(uint32_t));
+   SDL_RenderClear(gpRenderer);
+   SDL_RenderCopy(gpRenderer, gpHDTexture, NULL, NULL);
+   SDL_RenderPresent(gpRenderer);
+
+   PAL_HDResetFrameOnNextRecord();
+}
 
 VOID
 VIDEO_UpdateScreen(
@@ -631,6 +726,15 @@ VIDEO_UpdateScreen(
    }
 
 #if SDL_VERSION_ATLEAST(2,0,0)
+   if (gConfig.fHDRemaster)
+   {
+      if (SDL_MUSTLOCK(gpScreenReal))
+      {
+         SDL_UnlockSurface(gpScreenReal);
+      }
+      VIDEO_HD_Present();
+      return;
+   }
    gRenderBackend.RenderCopy();
 #else
    SDL_UpdateRect(gpScreenReal, dstrect.x, dstrect.y, dstrect.w, dstrect.h);
