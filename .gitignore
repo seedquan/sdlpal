@@ -282,3 +282,7 @@ emscripten/*.cpp
 
 # macOS Trashes
 *.DS_Store
+
+# HD asset pipeline build artifacts
+tools/hd_extract
+tools/hd_extract.dSYM/

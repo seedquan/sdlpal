@@ -11,7 +11,10 @@ n=0
 for f in "$SRC"/*.png; do
   [ -e "$f" ] || continue
   base="$(basename "$f")"
-  "$BIN" -i "$f" -o "$OUT/$base" -s 4 -n "$MODEL" -m "$RE/models" -f png >/dev/null 2>&1
+  if ! "$BIN" -i "$f" -o "$OUT/$base" -s 4 -n "$MODEL" -m "$RE/models" -f png >/dev/null 2>>"$OUT/.upscale_errors.log"; then
+    echo "failed: $base" >&2
+    continue
+  fi
   n=$((n+1))
 done
 echo "upscaled $n file(s) with model $MODEL -> $OUT"

@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include "palcommon.h"
 #include "hd_extract_core.h"
 #include "hd_png.h"
@@ -22,6 +23,14 @@ main(int argc, char *argv[])
    {
       fprintf(stderr, "usage: %s <rgm.mkf> <pat.mkf> <out_dir>\n", argv[0]);
       return 2;
+   }
+
+   /* ensure output dirs exist (ignore EEXIST) */
+   mkdir(argv[3], 0755);
+   {
+      char dir[1024];
+      snprintf(dir, sizeof(dir), "%s/src", argv[3]);
+      mkdir(dir, 0755);
    }
 
    fpPAT = fopen(argv[2], "rb");
@@ -54,7 +63,7 @@ main(int argc, char *argv[])
 
       snprintf(path, sizeof(path), "%s/src/%016llx.png", argv[3],
                (unsigned long long)hash);
-      if (HDX_WritePNG(path, rgba, w, h) != 0) continue;
+      if (HDX_WritePNG(path, rgba, w, h) != 0) { fprintf(stderr, "warn: failed to write %s\n", path); continue; }
 
       fprintf(fpManifest,
               "%s  { \"hash\": \"%016llx\", \"src\": \"src/%016llx.png\", "
