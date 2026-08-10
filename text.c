@@ -1329,12 +1329,17 @@ PAL_StartDialogWithOffset(
          //
          if (PAL_MKFReadChunk(buf, PAL_RLEBUFSIZE, iNumCharFace, gpGlobals->f.fpRGM) > 0)
          {
-            rect.x = 270 - PAL_RLEGetWidth((LPCBITMAPRLE)buf) / 2 + xOff;
-            rect.y = 144 - PAL_RLEGetHeight((LPCBITMAPRLE)buf) / 2 + yOff;
+            rect.w = PAL_RLEGetWidth((LPCBITMAPRLE)buf);
+            rect.h = PAL_RLEGetHeight((LPCBITMAPRLE)buf);
+            rect.x = 270 - rect.w / 2 + xOff;
+            rect.y = 144 - rect.h / 2 + yOff;
 
             PAL_RLEBlitToSurface((LPCBITMAPRLE)buf, gpScreen, PAL_XY(rect.x, rect.y));
 
-            VIDEO_UpdateScreen(NULL);
+            /* Partial update of the face rect (matches the upper-face path) so the
+               HD frame reset does not fire — keeps the HD portrait from flickering
+               against the animated dialogue wait-icon. */
+            VIDEO_UpdateScreen(&rect);
          }
       }
       g_TextLib.posDialogTitle = PAL_XY(iNumCharFace > 0 ? 4 : 12, 108);
