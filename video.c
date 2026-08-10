@@ -696,7 +696,11 @@ VIDEO_HD_Present(
    SDL_RenderCopy(gpRenderer, gpHDTexture, NULL, NULL);
    SDL_RenderPresent(gpRenderer);
 
-   PAL_HDResetFrameOnNextRecord();
+   /* NOTE: the per-frame command reset is NOT done here. VIDEO_UpdateScreen
+      resets only on FULL-screen updates (lpRect == NULL); partial (surgical)
+      updates — e.g. the animated dialogue wait-icon — keep the accumulated
+      overlays so a draw-once portrait persists across them instead of
+      flickering when another sprite is blitted. */
 }
 
 VOID
@@ -824,6 +828,18 @@ VIDEO_UpdateScreen(
          SDL_UnlockSurface(gpScreenReal);
       }
       VIDEO_HD_Present();   /* VIDEO_HD_Present manages its own lock/unlock internally */
+      //
+      // Reset the HD command frame ONLY on full-screen updates (lpRect == NULL).
+      // A full update means the game redrew the whole screen, so next frame's
+      // commands should start fresh (keeps moving sprites correct). Partial
+      // updates are surgical edits (dialogue wait-icon, typed text, item
+      // highlights) that leave the rest of the screen — including a draw-once
+      // portrait — untouched, so the accumulated overlays must persist.
+      //
+      if (lpRect == NULL)
+      {
+         PAL_HDResetFrameOnNextRecord();
+      }
       return;
    }
    gRenderBackend.RenderCopy();
