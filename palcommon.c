@@ -1277,6 +1277,15 @@ PAL_HDResetFrameOnNextRecord(
 }
 
 void
+PAL_HDInvalidateCommands(
+   void
+)
+{
+   g_hdCmdCount = 0;
+   g_hdResetPending = FALSE;
+}
+
+void
 PAL_HDRecordBlit(
    uint64_t      hash,
    LPCBITMAPRLE  sprite,

@@ -562,6 +562,13 @@ VIDEO_HD_Present(
 
    VIDEO_HD_Ensure();
 
+   /* Guard against allocation failure: fall back to the classic present path. */
+   if (gpHDTexture == NULL || gpHDPixels == NULL)
+   {
+      VIDEO_RenderCopy();
+      return;
+   }
+
 #if HD_DEBUG
    {
       static Uint32 last = 0; Uint32 now = SDL_GetTicks();

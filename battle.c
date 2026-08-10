@@ -825,6 +825,12 @@ PAL_FreeBattleSprites(
    int         i;
 
    //
+   // HD: drop stale draw commands so a present before the next blit cannot
+   // replay freed sprite pointers.
+   //
+   PAL_HDInvalidateCommands();
+
+   //
    // Free all the loaded sprites
    //
    for (i = 0; i <= gpGlobals->wMaxPartyMemberIndex; i++)

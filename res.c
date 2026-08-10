@@ -141,6 +141,12 @@ PAL_FreeResources(
    if (gpResources != NULL)
    {
       //
+      // HD: drop stale draw commands so a present before the next blit cannot
+      // replay freed sprite pointers.
+      //
+      PAL_HDInvalidateCommands();
+
+      //
       // Free all loaded sprites
       //
       PAL_FreePlayerSprites();
@@ -240,6 +246,12 @@ PAL_LoadResources(
       }
 
       //
+      // HD: drop stale draw commands so a present before the next blit cannot
+      // replay freed sprite pointers.
+      //
+      PAL_HDInvalidateCommands();
+
+      //
       // Free previous loaded scene (sprites and map)
       //
       PAL_FreeEventObjectSprites();
@@ -309,6 +321,12 @@ PAL_LoadResources(
    //
    if (gpResources->bLoadFlags & kLoadPlayerSprite)
    {
+      //
+      // HD: drop stale draw commands so a present before the next blit cannot
+      // replay freed sprite pointers.
+      //
+      PAL_HDInvalidateCommands();
+
       //
       // Free previous loaded player sprites
       //

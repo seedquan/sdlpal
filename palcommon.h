@@ -231,6 +231,7 @@ typedef struct tagHDDRAWCMD {
 } HDDRAWCMD;
 
 void        PAL_HDResetFrameOnNextRecord(void);   /* mark: next record starts a new frame */
+void        PAL_HDInvalidateCommands(void);        /* drop stale draw commands immediately */
 void        PAL_HDRecordBlit(uint64_t hash, LPCBITMAPRLE sprite, INT x, INT y, BOOL plain);
 UINT        PAL_HDGetFrameCommands(const HDDRAWCMD **ppCmds);  /* returns count, sets *ppCmds */
 UINT        PAL_HDGetUniqueHashCount(void);        /* distinct hashes in current frame */
