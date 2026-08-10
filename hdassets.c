@@ -8,7 +8,7 @@
 extern unsigned char *stbi_load(char const *filename, int *x, int *y, int *comp, int req_comp);
 extern void           stbi_image_free(void *retval_from_stbi_load);
 
-#define HDA_MAX 512
+#define HDA_MAX 4096
 
 typedef struct tagHDAENTRY {
    uint64_t   hash;
@@ -84,14 +84,30 @@ HDAssets_Get(
       char           path[1152];
       int            w = 0, h = 0, comp = 0;
       unsigned char *img;
-      if (g_hdaCount >= HDA_MAX) return -1;
+      HDAENTRY      *slot;
+
+      if (g_hdaCount < HDA_MAX)
+      {
+         slot = &g_hda[g_hdaCount++];
+      }
+      else
+      {
+         INT k;
+         slot = NULL;
+         for (k = 0; k < g_hdaCount; k++)
+         {
+            if (g_hda[k].rgba == NULL) { slot = &g_hda[k]; break; }  /* reuse a negative slot */
+         }
+         if (slot == NULL) return -1;   /* table full of positives — impossible for <HDA_MAX assets */
+      }
+
       snprintf(path, sizeof(path), "%s/%016llx.png", g_hdaDir, (unsigned long long)hash);
       img = stbi_load(path, &w, &h, &comp, 4);
-      e = &g_hda[g_hdaCount++];
-      e->hash = hash;
-      e->rgba = img;              /* img == NULL => negative cache */
-      e->w = w;
-      e->h = h;
+      slot->hash = hash;
+      slot->rgba = img;    /* NULL => negative cache */
+      slot->w = w;
+      slot->h = h;
+      e = slot;
    }
    if (e->rgba == NULL) return -1;
    if (outRGBA) *outRGBA = e->rgba;
